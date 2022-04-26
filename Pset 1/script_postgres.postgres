@@ -1,0 +1,390 @@
+-- Criação de usuário, banco de dados e esquema, respectivamente
+
+CREATE USER caua with creatdb PASSWORD '18102003';
+
+create database uvv 
+    with owner = caua
+    template = template0
+    encoding = 'UTF8'
+    LC_COLLATE = 'pt_BR.UTF-8'
+    LC_CTYPE = 'pt_BR.UTF-8'
+    allow_connections = true
+    ;
+
+CREATE SCHEMA elmasri AUTHORIZATION caua;
+
+-- Troca de uso do esquema
+
+ALTER USER caua
+SET SEARTCH_PATH TO elmasri, "$user", public;
+
+
+
+-- Tabela Departamento
+
+CREATE TABLE elmasri.departamento (
+                numero_departamento INTEGER NOT NULL,
+                nome_departamento VARCHAR(15) NOT NULL,
+                cpf_gerente CHAR(11) NOT NULL,
+                data_inicio_gerente DATE,
+                CONSTRAINT departamento_pk PRIMARY KEY (numero_departamento)
+);
+
+
+COMMENT ON COLUMN elmasri.departamento.numero_departamento IS 'Numero do departamento. É o PK da tabela';
+COMMENT ON COLUMN elmasri.departamento.nome_departamento IS 'Nome do departamento. Deve ser único';
+COMMENT ON COLUMN elmasri.departamento.cpf_gerente IS 'CPF do gerente do departamento. É uma FK para a tabela funcionários';
+COMMENT ON COLUMN elmasri.departamento.data_inicio_gerente IS 'Data de início no departamento';
+
+
+
+-- Tabela Projeto
+
+CREATE TABLE elmasri.projeto (
+                numero_projeto INTEGER NOT NULL,
+                nome_projeto VARCHAR(15) NOT NULL,
+                local_projeto VARCHAR(15),
+                numero_departamento INTEGER NOT NULL,
+                CONSTRAINT projeto_pk PRIMARY KEY (numero_projeto)
+);
+COMMENT ON COLUMN elmasri.projeto.numero_projeto IS 'Número do projeto. É a PK desta tabela';
+COMMENT ON COLUMN elmasri.projeto.nome_projeto IS 'Nome do projeto. Deve ser único
+';
+COMMENT ON COLUMN elmasri.projeto.local_projeto IS 'Localização do projeto
+';
+COMMENT ON COLUMN elmasri.projeto.numero_departamento IS 'Número do departamento. É uma FK para a tabela departamento';
+
+
+CREATE UNIQUE INDEX projeto_idx
+ ON elmasri.projeto
+ ( nome_projeto );
+
+
+
+-- Tabela Localização de departamento
+
+CREATE TABLE elmasri.localizacoes_departamento (
+                numero_departamento INTEGER NOT NULL,
+                local VARCHAR(15) NOT NULL,
+                CONSTRAINT localizacoes_departamento_pk PRIMARY KEY (numero_departamento, local)
+);
+COMMENT ON COLUMN elmasri.localizacoes_departamento.numero_departamento IS 'Número do departamento. Faz parte da PK desta tabela e também é uma FK para a tabela departamento
+';
+COMMENT ON COLUMN elmasri.localizacoes_departamento.local IS 'Localização do departamento. Faz parte da PK desta tabela
+';
+
+
+CREATE SEQUENCE elmasri.funcionario_cpf_supervisor_seq;
+
+CREATE SEQUENCE elmasri.funcionario_departamento_numero_departamento_seq;
+
+
+
+-- Tabela funcionário
+
+CREATE TABLE elmasri.funcionario (
+                cpf CHAR(11) NOT NULL,
+                primeiro_nome VARCHAR(15) NOT NULL,
+                nome_meio CHAR(1),
+                ultimo_nome VARCHAR(15) NOT NULL,
+                data_nascimento DATE NOT NULL,
+                endereco VARCHAR(50),
+                sexo CHAR(1),
+                salario NUMERIC(10,2),
+                cpf_supervisor CHAR(11) DEFAULT nextval('elmasri.funcionario_cpf_supervisor_seq'),
+                numero_departamento INTEGER NOT NULL DEFAULT nextval('elmasri.funcionario_departamento_numero_departamento_seq'),
+                CONSTRAINT funcionario_pk PRIMARY KEY (cpf)
+);
+COMMENT ON COLUMN elmasri.funcionario.cpf IS 'CPF do funcionário. será a PK da tabela';
+COMMENT ON COLUMN elmasri.funcionario.primeiro_nome IS 'Primeiro nome do funcionário';
+COMMENT ON COLUMN elmasri.funcionario.nome_meio IS 'Inicial do nome do meio
+';
+COMMENT ON COLUMN elmasri.funcionario.ultimo_nome IS 'Sobrenome do funcionário
+';
+COMMENT ON COLUMN elmasri.funcionario.data_nascimento IS 'Data de nascimento do funcionário 
+';
+COMMENT ON COLUMN elmasri.funcionario.endereco IS 'Endereço do funcionário';
+COMMENT ON COLUMN elmasri.funcionario.sexo IS 'Sexo de funcionário
+';
+COMMENT ON COLUMN elmasri.funcionario.salario IS 'Salário do funcionário';
+COMMENT ON COLUMN elmasri.funcionario.cpf_supervisor IS 'CPF do supervisor, será uma FK para a própria tabela (um auto-relacionamento)';
+COMMENT ON COLUMN elmasri.funcionario.numero_departamento IS 'Numero do departamento do funcionário, é uma FK da tabela departamento';
+
+
+ALTER SEQUENCE elmasri.funcionario_cpf_supervisor_seq OWNED BY elmasri.funcionario.cpf_supervisor;
+
+ALTER SEQUENCE elmasri.funcionario_departamento_numero_departamento_seq OWNED BY elmasri.funcionario.numero_departamento;
+
+CREATE SEQUENCE elmasri.trabalha_em_funcionario_cpf_seq;
+
+
+
+-- Tabela "trabalha_em"
+
+CREATE TABLE elmasri.trabalha_em (
+                cpf_funcionario CHAR(11) NOT NULL DEFAULT nextval('elmasri.trabalha_em_funcionario_cpf_seq'),
+                numero_projeto INTEGER NOT NULL,
+                horas NUMERIC(3,1) NOT NULL,
+                CONSTRAINT trabalha_em_pk PRIMARY KEY (cpf_funcionario, numero_projeto)
+);
+COMMENT ON COLUMN elmasri.trabalha_em.cpf_funcionario IS 'CPF do funcionário. Faz parte da PK desta tabela e é uma FK para a tabela funcionário
+';
+COMMENT ON COLUMN elmasri.trabalha_em.numero_projeto IS 'Número do projeto. Faz parte da PK desta tabela é uma FK para a tabela projeto
+';
+COMMENT ON COLUMN elmasri.trabalha_em.horas IS 'Horas trabalhadas pelo funcionário neste projeto';
+
+
+ALTER SEQUENCE elmasri.trabalha_em_funcionario_cpf_seq OWNED BY elmasri.trabalha_em.cpf_funcionario;
+
+CREATE SEQUENCE elmasri.dependente_funcionario_cpf_seq;
+
+
+
+-- Tabela "Dependente"
+
+CREATE TABLE elmasri.dependente (
+                cpf_funcionario CHAR(11) NOT NULL DEFAULT nextval('elmasri.dependente_funcionario_cpf_seq'),
+                nome_dependente VARCHAR(15) NOT NULL,
+                sexo CHAR(1),
+                data_nascimento DATE,
+                parentesco VARCHAR(15),
+                CONSTRAINT dependente_pk PRIMARY KEY (cpf_funcionario, nome_dependente)
+);
+COMMENT ON COLUMN elmasri.dependente.cpf_funcionario IS 'CPF do funcionário. Faz parte da PK desta tabela e é uma FK para a tabela funcionário';
+COMMENT ON COLUMN elmasri.dependente.nome_dependente IS 'Nome do dependente. Faz parte da PK desta tabela';
+COMMENT ON COLUMN elmasri.dependente.sexo IS 'Sexo do dependente';
+COMMENT ON COLUMN elmasri.dependente.data_nascimento IS 'Data de nascimento do dependente';
+COMMENT ON COLUMN elmasri.dependente.parentesco IS 'Descrição do parentesco do dependente com o funcionário';
+
+
+ALTER SEQUENCE elmasri.dependente_funcionario_cpf_seq OWNED BY elmasri.dependente.cpf_funcionario;
+
+-- Adicinonando a FK de departamento_localizacoes (numero_departamento)
+
+ALTER TABLE elmasri.localizacoes_departamento ADD CONSTRAINT departamento_localizacoes_departamento_fk
+FOREIGN KEY (numero_departamento)
+REFERENCES elmasri.departamento (numero_departamento)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+-- Adicionando a FK "numero_departamento" na tabela "departamento projeto"
+
+ALTER TABLE elmasri.projeto ADD CONSTRAINT departamento_projeto_fk
+FOREIGN KEY (numero_departamento)
+REFERENCES elmasri.departamento (numero_departamento)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+-- -- Adicionando a FK "numero_departamento" na tabela "funcionario"
+
+ALTER TABLE elmasri.funcionario ADD CONSTRAINT departamento_funcionario_fk
+FOREIGN KEY (numero_departamento)
+REFERENCES elmasri.departamento (numero_departamento)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+-- Adicionando a FK "numero_projeto" na tabela "trabalha_em"
+
+ALTER TABLE elmasri.trabalha_em ADD CONSTRAINT projeto_trabalha_em_fk
+FOREIGN KEY (numero_projeto)
+REFERENCES elmasri.projeto (numero_projeto)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+-- Adicionando a FK "cpf_funcionario" na tabela "dependente"
+
+ALTER TABLE elmasri.dependente ADD CONSTRAINT funcionario_dependente_fk
+FOREIGN KEY (cpf_funcionario)
+REFERENCES elmasri.funcionario (cpf)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+-- Adicionando a FK "cpf_funcionario" na tabela "trabalha_em"
+
+ALTER TABLE elmasri.trabalha_em ADD CONSTRAINT funcionario_trabalha_em_fk
+FOREIGN KEY (cpf_funcionario)
+REFERENCES elmasri.funcionario (cpf)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+-- Adicionando a FK "cpf_supervisor" na tabela "funcionario" 
+
+ALTER TABLE elmasri.funcionario ADD CONSTRAINT funcionario_funcionario_fk
+FOREIGN KEY (cpf_supervisor)
+REFERENCES elmasri.funcionario (cpf)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+
+
+-- Inserir dados primeiro na tabela "departamento"
+
+INSERT INTO elmasri.departamento (nome_departamento, numero_departamento, cpf_gerente, data_inicio_gerente)
+VALUES (‘Pesquisa’, 5, ‘3344555587’, '1988-05-22'); 
+
+INSERT INTO elmasri.departamento (nome_departamento, numero_departamento, cpf_gerente, data_inicio_gerente)
+VALUES ('Administração', 4, '98765432168', '1995-01-01');
+
+INSERT INTO elmasri.departamento (nome_departamento, numero_departamento, cpf_gerente, data_inicio_gerente)
+VALUES ('Matriz', 1, '88866555576', '1981-06-19');
+
+
+
+-- Inserir dados na tabela "funcionarios", botando o funcionário que não possui supervisor (Jorge) primeiro, e botando seu cpf novamente no campo
+
+INSERT INTO elmasri.funcionario (primeiro_nome, nome_meio, ultimo_nome, cpf, data_nascimento, endereco, sexo, salario, cpf_supervisor, numero_departamento)
+VALUES ('Jorge', 'E', 'Brito', '88866555576', '10-11-1937', 'Rua do Horto, 35, São Paulo, SP', 'M', '55.000', '88866555576', '1');
+
+INSERT INTO elmasri.funcionario (primeiro_nome, nome_meio, ultimo_nome, cpf, data_nascimento, endereco, sexo, salario, cpf_supervisor, numero_departamento)
+VALUES ('Fernando', 'T', 'Wong', '33344555587', '08-12-1955', 'Rua da Lapa, 34, São Paulo, SP', 'M', '40.000', '88866555576', '5');
+
+INSERT INTO elmasri.funcionario (primeiro_nome, nome_meio, ultimo_nome, cpf, data_nascimento, endereco, sexo, salario, cpf_supervisor, numero_departamento)
+VALUES ('Jennifer', 'S', 'Souza', '98765432168', '20-06-1941', 'Av.Arthur de Lima, 54, Santo André, SP', 'F', '43.000', '88866555576', '4');
+
+INSERT INTO elmasri.funcionario (primeiro_nome, nome_meio, ultimo_nome, cpf, data_nascimento, endereco, sexo, salario, cpf_supervisor, numero_departamento)
+VALUES ('João', 'B', 'Silva', '12345678966', '09-01-1965', 'Rua das Flores, 751, São Paulo, SP', 'M', '30.000', '33344555587', '5');
+
+INSERT INTO elmasri.funcionario (primeiro_nome, nome_meio, ultimo_nome, cpf, data_nascimento, endereco, sexo, salario, cpf_supervisor, numero_departamento)
+VALUES ('Alice', 'J', 'Zelaya', '99988777767', '19-01-1968', 'Rua Souza Lima, 35, Curitiba, PR', 'F', '25.000', '98765432168', '4');
+
+INSERT INTO elmasri.funcionario (primeiro_nome, nome_meio, ultimo_nome, cpf, data_nascimento, endereco, sexo, salario, cpf_supervisor, numero_departamento)
+VALUES ('Ronaldo', 'K', 'Lima', '66688444476', '15-09-1962', 'Rua Rebouças, 65, Piracicaba, SP', 'M', '38.000', '33344555587', '5');
+
+INSERT INTO elmasri.funcionario (primeiro_nome, nome_meio, ultimo_nome, cpf, data_nascimento, endereco, sexo, salario, cpf_supervisor, numero_departamento)
+VALUES ('Joice', 'A', 'Leite', '45345345376', '31-07-1972', 'Av.Lucas Obes, 74, São Paulo, SP', 'F', '25.000', '33344555587', '5');
+
+INSERT INTO elmasri.funcionario (primeiro_nome, nome_meio, ultimo_nome, cpf, data_nascimento, endereco, sexo, salario, cpf_supervisor, numero_departamento)
+VALUES ('André', 'V', 'Pereira', '98798798733', '29-03-1969', 'Rua Timbira, 35, São Paulo, SP', 'M', '25.000', '98765432168', '4');
+
+
+
+-- Inserir dados na tabela "localizacao_departamento"
+
+INSERT INTO elmasri.localizacoes_departamento (numero_departamento, local)
+VALUES (1, 'São Paulo'); 
+
+INSERT INTO elmasri.localizacoes_departamento (numero_departamento, local)
+VALUES (4, 'Mauá'); 
+
+INSERT INTO elmasri.localizacoes_departamento (numero_departamento, local)
+VALUES (5, 'Santo André'); 
+
+INSERT INTO elmasri.localizacoes_departamento (numero_departamento, local)
+VALUES (5, 'Itu'); 
+
+INSERT INTO elmasri.localizacoes_departamento (numero_departamento, local)
+VALUES (5, 'São Paulo');
+
+
+
+-- Inserir dados na tabela "projeto"
+
+INSERT INTO elmasri.projeto (nome_projeto, numero_projeto, local_projeto, numero_departamento)
+VALUES ('ProdutoX', 1, 'Santo André', 5);
+
+INSERT INTO elmasri.projeto (nome_projeto, numero_projeto, local_projeto, numero_departamento)
+VALUES ('ProdutoY', 2, 'Itu', 5);
+
+INSERT INTO elmasri.projeto (nome_projeto, numero_projeto, local_projeto, numero_departamento)
+VALUES ('ProdutoZ', 3, 'São Paulo', 5);
+
+INSERT INTO elmasri.projeto (nome_projeto, numero_projeto, local_projeto, numero_departamento)
+VALUES ('Informatização', 10, 'Mauá', 4);
+
+INSERT INTO elmasri.projeto (nome_projeto, numero_projeto, local_projeto, numero_departamento)
+VALUES ('Reorganização', 20, 'São Paulo', 1);
+
+INSERT INTO elmasri.projeto (nome_projeto, numero_projeto, local_projeto, numero_departamento)
+VALUES ('Novosbenefícios', 30, 'Mauá', 4);
+
+
+
+-- Inserir dados na tabela "trabalha_em"
+
+INSERT INTO elmasri.trabalha_em (cpf_funcionario, numero_projeto, horas)
+VALUES ('12345678966', '1', '32,5');
+
+INSERT INTO elmasri.trabalha_em (cpf_funcionario, numero_projeto, horas)
+VALUES ('12345678966', '2', '7.5');
+
+INSERT INTO elmasri.trabalha_em (cpf_funcionario, numero_projeto, horas)
+VALUES ('66688444476', '3', '40.0');
+
+INSERT INTO elmasri.trabalha_em (cpf_funcionario, numero_projeto, horas)
+VALUES ('45345345376', '1', '20.0');
+
+INSERT INTO elmasri.trabalha_em (cpf_funcionario, numero_projeto, horas)
+VALUES ('45345345376', '2', '20.0');
+
+INSERT INTO elmasri.trabalha_em (cpf_funcionario, numero_projeto, horas)
+VALUES ('33344555587', '2', '10.0');
+
+INSERT INTO elmasri.trabalha_em (cpf_funcionario, numero_projeto, horas)
+VALUES ('33344555587', '3', '10.0');
+
+INSERT INTO elmasri.trabalha_em (cpf_funcionario, numero_projeto, horas)
+VALUES ('33344555587', '10', '10.0');
+
+INSERT INTO elmasri.trabalha_em (cpf_funcionario, numero_projeto, horas)
+VALUES ('33344555587', '20', '10.0');
+
+INSERT INTO elmasri.trabalha_em (cpf_funcionario, numero_projeto, horas)
+VALUES ('99988777767', '30', '30.0');
+
+INSERT INTO elmasri.trabalha_em (cpf_funcionario, numero_projeto, horas)
+VALUES ('99988777767', '10', '10.0');
+
+INSERT INTO elmasri.trabalha_em (cpf_funcionario, numero_projeto, horas)
+VALUES ('98798798733', '10', '35.0');
+
+INSERT INTO elmasri.trabalha_em (cpf_funcionario, numero_projeto, horas)
+VALUES ('98798798733', '30', '5.0');
+
+INSERT INTO elmasri.trabalha_em (cpf_funcionario, numero_projeto, horas)
+VALUES ('98765432168', '30', '20.0');
+
+INSERT INTO elmasri.trabalha_em (cpf_funcionario, numero_projeto, horas)
+VALUES ('98765432168', '20', '15.0');
+
+INSERT INTO elmasri.trabalha_em (cpf_funcionario, numero_projeto, horas)
+VALUES ('88866555576', '20', '0');
+
+
+-- Inserir dados na tabela "Dependente"
+
+INSERT INTO elmasri.dependente (cpf_funcionario, nome_dependente, sexo, data_nascimento, parentesco)
+VALUES ('33344555587', 'Alicia', 'F', '05-04-1986', 'Filha');
+
+
+INSERT INTO elmasri.dependente (cpf_funcionario, nome_dependente, sexo, data_nascimento, parentesco)
+VALUES ('33344555587', 'Tiago', 'M', '25-04-1896','Filho');
+
+
+INSERT INTO elmasri.dependente (cpf_funcionario, nome_dependente, sexo, data_nascimento, parentesco)
+VALUES ('33344555587' , 'Janaina', 'F', '03-05-1958', 'Esposa');
+
+
+INSERT INTO elmasri.dependente (cpf_funcionario, nome_dependente, sexo, data_nascimento, parentesco)
+VALUES ('98765432168', 'Antonio', 'M', '28-02-1942', 'Marido');
+
+
+INSERT INTO elmasri.dependente (cpf_funcionario, nome_dependente, sexo, data_nascimento, parentesco)
+VALUES ('12345678966', 'Michael' , 'M', '04-01-1988', 'Filho');
+
+
+INSERT INTO elmasri.dependente (cpf_funcionario, nome_dependente, sexo, data_nascimento, parentesco)
+VALUES ('12345678966' , 'Alicia', 'F', '30-12-1988', 'Filha');
+
+
+INSERT INTO elmasri.dependente (cpf_funcionario, nome_dependente, sexo, data_nascimento, parentesco)
+VALUES ('12345678966', 'Elizabeth', 'F', '05-05-1967', 'Esposa');
+
+
+-- Participantes: Cauã Soares,Daniel Soares e Gustavo Caçador
