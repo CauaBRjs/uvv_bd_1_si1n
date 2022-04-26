@@ -17,3 +17,5 @@
 > Neste pset, foi desenvolvido os conhecimentos de SQL, a modelagem e implementação
 > de um modelo de banco de dados, conhecimento sobre o Markdown para a documentação,
 > juntamente do git e github
+
+### Participantes: Cauã Soares, Daniel Soares, Gustavo Caçador
